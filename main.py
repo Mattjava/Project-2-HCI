@@ -49,7 +49,7 @@ def main():
     st.title('Fish Track')
     st.header('A way to keep track of fish')
     
-    home, upload, history, record = st.tabs(["Home", "Upload", "History", "Fish Record"])
+    home, upload, history, visualization, record = st.tabs(["Home", "Upload", "History", "Visualization", "Fish Record"])
     
     with home:
         st.text("Welcome to Fish Track\nAn app designed for fishermen to record their best catches.")
@@ -110,10 +110,66 @@ def main():
                 st.error(f"Failed to save: {e}")
             else:
                 st.success("Entry successfully saved!")
-    with history:
-        data = load_from_csv(ENTRY_CSV)
+    with visualization:
+        data = load_from_csv(ENTRY_CSV).to_dict()
 
         st.map(data)
+        
+        st.bar_chart(data)
+        
+    with history:
+        data = load_from_csv(ENTRY_CSV).to_numpy()
+        
+        db = {}
+        
+        for i in range(1, len(data)):
+            raw = data[i]
+            
+            title = raw[1]
+            
+            entry = {
+                'file_name': raw[0],
+                'title': raw[1],
+                'species': raw[2],
+                'lat': raw[4],
+                'lot': raw[3],
+                'datetime': raw[5]
+            }
+        
+            db[title] = entry
+        
+        titles = db.keys()
+        
+        query = st.text_input("Search for titles of your best catches", placeholder="Type in to search - Press enter to search")
+        
+        if query:
+            results = [title for title in titles if query in title]
+        else:
+            results = titles
+            
+        with st.container(height=200):
+            chosen_entry = st.radio("Select a entry to view more", options=results)
+            
+        if chosen_entry:
+            entry_data = db[chosen_entry]
+            
+            st.title(entry_data['title'])
+            
+            st.header(f"Species: {entry_data['species']}")
+            
+            
+            try:
+                st.image(image=PHOTO_PATH + "/" + entry_data['file_name'])
+            except Exception:
+                st.error("Could not find image. It has either been deleted or moved")
+                
+            st.text(f"Coordinates caught ({entry_data['lat']},{entry_data['lot']})")
+            
+            st.text(f"Date & time captured: {entry_data['datetime']}")
+                
+            
+            
+            # st.image(PHOTO_PATH.join(entry_data['file_name']))
 
     with record:
         data = load_from_csv(ENTRY_CSV)
