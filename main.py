@@ -15,11 +15,10 @@ if not os.path.exists(PHOTO_PATH):
     os.makedirs(PHOTO_PATH)
     
     
-ENTRY_CSV = os.path.join(ENTRY_PATH, "entries.csv")
-    
-    
 if not os.path.exists(ENTRY_PATH):
     os.makedirs(ENTRY_PATH)
+
+ENTRY_CSV = os.path.join(ENTRY_PATH, "entries.csv")
 
 def save_to_csv(data_dict, csv_file):
     new = pd.DataFrame([data_dict])
@@ -41,20 +40,17 @@ if not os.path.exists(PHOTO_PATH):
 if not os.path.exists(ENTRY_PATH):
     os.makedir(ENTRY_PATH)
 
-# TO-DO; Replace with fish API
-fishes = ["Carp", "Salmon", 'Unknown']
 
 
 def main():
     st.title('Fish Track')
     st.header('A way to keep track of fish')
     
-    home, upload, history = st.tabs(["Home", "Upload", "History"])
+    home, upload, history, record = st.tabs(["Home", "Upload", "History", "Fish Record"])
     
     with home:
         st.text("Welcome to Fish Track\nAn app designed for fishermen to record their best catches.")
         
-        st.text("")
         
     with upload:
         
@@ -108,6 +104,23 @@ def main():
                 st.error(f"Failed to save: {e}")
             else:
                 st.success("Entry successfully saved!")
+    with history:
+        data = load_from_csv(ENTRY_CSV)
+
+        st.map(data)
+
+    with record:
+        data = load_from_csv(ENTRY_CSV)
+
+        fish_names = data['fish_species']
+
+        with st.container(height=200):
+            chosen_fish = st.radio(label="Select species to examine", options=fish_names, index=None)
+
+        if chosen_fish:
+            st.title(chosen_fish)
+
+            st.caption("Scientific name: ")
             
                 
 if __name__ == "__main__":
