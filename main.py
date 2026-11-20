@@ -139,6 +139,10 @@ def main():
         db = transform_to_data_list(data)
         
         st.title("Statistics")
+        
+        st.header("Table")
+        
+        st.dataframe(raw)
 
         st.header("Map of Catches")
         st.map(map_data, color="#ADD8E6")
