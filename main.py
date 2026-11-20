@@ -2,12 +2,8 @@ import streamlit as st
 from streamlit_geolocation import streamlit_geolocation
 import requests as req
 import pandas as pd
-from dotenv import load_dotenv
 from datetime import datetime
 import os, time
-
-load_dotenv()
-
 
 PHOTO_PATH = "photo"
 ENTRY_PATH = "entries"
