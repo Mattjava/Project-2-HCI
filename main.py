@@ -1,15 +1,18 @@
 import streamlit as st
+from streamlit_geolocation import streamlit_geolocation
 import requests as req
 import pandas as pd
 from dotenv import load_dotenv
 from datetime import datetime
-import os
+import os, time
 
 load_dotenv()
 
 
 PHOTO_PATH = "photo"
 ENTRY_PATH = "entries"
+
+API_URL = "https://api.inaturalist.org/v1/taxa"
 
 if not os.path.exists(PHOTO_PATH):
     os.makedirs(PHOTO_PATH)
@@ -53,6 +56,9 @@ def main():
         
         
     with upload:
+        location = streamlit_geolocation()
+        st.caption("Click above to load in your current position")
+        
         
         with st.form(key="user-form"):
             uploaded_picture = st.file_uploader("Upload the picture of your catch! (jpg, png)", type=["jpg", "png"])
@@ -61,9 +67,9 @@ def main():
             
             fish_type = st.text_input("What species is this? Avoid nicknames; please use common name or scientific name")
             
-            latitude = st.number_input(label="Latitude of location")
+            latitude = st.number_input(label="Latitude of location", value=location['latitude'])
             
-            longitude = st.number_input(label="Longitude of location")
+            longitude = st.number_input(label="Longitude of location", value=location['longitude'])
             
             dt = st.datetime_input(
                 "Select the date and time of when you catch it",
@@ -112,15 +118,55 @@ def main():
     with record:
         data = load_from_csv(ENTRY_CSV)
 
-        fish_names = data['fish_species']
+        raw = list(data['fish_species'])
+        
+        query = st.text_input("Search common names", placeholder="Type in to search - Press enter to search")
+        
+        if query:
+            fish_names = [fish for fish in raw if query in fish]
+        else:
+            fish_names = raw
 
         with st.container(height=200):
             chosen_fish = st.radio(label="Select species to examine", options=fish_names, index=None)
 
         if chosen_fish:
-            st.title(chosen_fish)
+            params = {
+                'q': chosen_fish
+            }
+            
+            request = req.get(API_URL, params=params).json()
+            
+            res = request['results']
+            
+            if len(res) == 0:
+                st.info("Sorry, we couldn't find any information regarding this species")
+                
+            fish = res[0]
+            
+            id = fish['id']
+            
+            time.sleep(1)
+            
+            summary = req.get(API_URL + "/" + str(id)).json()['results'][0]
+            
+            
+            photo = fish['default_photo']
+            
+            st.title(f"Scientific name: {fish['name']}")
+                        
+            st.header(f"Common name: {fish['preferred_common_name']}")
+            
+            st.image(photo['medium_url'], output_format="JPEG", width=400)
+            st.caption(photo['attribution'])
 
-            st.caption("Scientific name: ")
+            if summary and "wikipedia_summary" in summary:
+                st.html(summary['wikipedia_summary'])
+            else:
+                st.text("No summary provided. Check the wikipedia link below for more information")
+            
+            st.text(f"Wikipedia link: {fish['wikipedia_url']}")
+            
             
                 
 if __name__ == "__main__":
