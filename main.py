@@ -35,8 +35,31 @@ def load_from_csv(csv_file):
         return pd.read_csv(csv_file)
     else:
         return pd.DataFrame()
+    
+def transform_to_data_list(data):
+    res = {}
+    
+    for i in range(1, len(data)):
+            raw = data[i]
+            
+            title = raw[1]
+            
+            entry = {
+                'file_name': raw[0],
+                'title': raw[1],
+                'species': raw[2],
+                'lat': raw[4],
+                'lot': raw[3],
+                'datetime': raw[5]
+            }
+        
+            res[title] = entry
+            
+    return res
 
-
+def transform_to_frequency_table(data):
+    return data['fish_species'].value_counts().rename_axis("species").reset_index(name="frequency")
+    
 if not os.path.exists(PHOTO_PATH):
     os.makedirs(PHOTO_PATH)
 
@@ -111,32 +134,29 @@ def main():
             else:
                 st.success("Entry successfully saved!")
     with visualization:
-        data = load_from_csv(ENTRY_CSV).to_dict()
-
-        st.map(data)
+        raw = load_from_csv(ENTRY_CSV)
         
-        st.bar_chart(data)
+        data = raw.to_numpy()
+        
+        map_data = raw.to_dict()
+        
+        db = transform_to_data_list(data)
+        
+        st.title("Statistics")
+
+        st.header("Map of Catches")
+        st.map(map_data, color="#ADD8E6")
+        
+        # Count
+        st.header("Frequency of Species")
+        st.bar_chart(transform_to_frequency_table(raw), x="species", y="frequency", x_label="Species", y_label="Count")
+        
+        st.header("Number of Catches a Day")
         
     with history:
         data = load_from_csv(ENTRY_CSV).to_numpy()
         
-        db = {}
-        
-        for i in range(1, len(data)):
-            raw = data[i]
-            
-            title = raw[1]
-            
-            entry = {
-                'file_name': raw[0],
-                'title': raw[1],
-                'species': raw[2],
-                'lat': raw[4],
-                'lot': raw[3],
-                'datetime': raw[5]
-            }
-        
-            db[title] = entry
+        db = transform_to_data_list(data)
         
         titles = db.keys()
         
@@ -174,7 +194,7 @@ def main():
     with record:
         data = load_from_csv(ENTRY_CSV)
 
-        raw = list(data['fish_species'])
+        raw = set(data['fish_species'])
         
         query = st.text_input("Search common names", placeholder="Type in to search - Press enter to search")
         
