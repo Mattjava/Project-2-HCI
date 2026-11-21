@@ -259,8 +259,10 @@ def main():
             
             time.sleep(1)
             
-            summary = req.get(API_URL + "/" + str(id)).json()['results'][0]
-            
+            summary = req.get(API_URL + "/" + str(id)).json()
+            print(summary)
+
+            summary = summary['results'][0]
             
             photo = fish['default_photo']
             
@@ -271,11 +273,13 @@ def main():
             st.image(photo['medium_url'], output_format="JPEG", width=400)
             st.caption(photo['attribution'])
 
-            if summary and "wikipedia_summary" in summary:
+            if summary is not None and "wikipedia_summary" in summary and summary['wikipedia_summary'] is not None:
                 st.html(summary['wikipedia_summary'])
             else:
                 st.text("No summary provided. Check the wikipedia link below for more information")
-            
+
+
+                
             st.page_link(label="Click here for more information", page=fish['wikipedia_url'])
             
             
