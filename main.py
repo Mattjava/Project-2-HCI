@@ -3,7 +3,7 @@ from streamlit_geolocation import streamlit_geolocation
 import requests as req
 import pandas as pd
 from datetime import datetime
-import os, time
+import os, time, random
 
 PHOTO_PATH = "photo"
 ENTRY_PATH = "entries"
@@ -57,7 +57,15 @@ def transform_to_species_frequency_table(data):
     return data['fish_species'].value_counts().rename_axis("species").reset_index(name="frequency")
 
 def transform_to_date_frequency_table(data):
-    return data['datetime'].value_counts().rename_axis("date").reset_index(name="frequency")
+    dates = data['datetime']
+    
+    dates = pd.to_datetime(dates)
+    
+    res = pd.DataFrame({'Dates': dates})
+    
+    output = res.groupby(pd.Grouper(key='Dates', freq='D'), as_index=False).agg(Catches=('Dates', 'count'))
+    
+    return pd.DataFrame(output)
     
 if not os.path.exists(PHOTO_PATH):
     os.makedirs(PHOTO_PATH)
@@ -83,7 +91,7 @@ def main():
         
         
         with st.form(key="user-form"):
-            uploaded_picture = st.file_uploader("Upload the picture of your catch! (jpg, png)", type=["jpg", "png"])
+            uploaded_picture = st.file_uploader("(Optional) Upload the picture of your catch! (jpg, png)", type=["jpg", "png"])
             
             title = st.text_input("What do you want to name this entry?")
             
@@ -109,17 +117,30 @@ def main():
                 if not confirm:
                     raise Exception("Please check the box before submitting")
                 
+                if latitude == None or longitude == None:
+                    raise Exception("Missing location")
                 
-                file_name = uploaded_picture.name
+                if title == None:
+                    raise Exception("Missing title")
                 
-                new_photo = os.path.join(PHOTO_PATH, file_name)
+                if fish_type == None:
+                    raise Exception("Missing species")
                 
+                print(uploaded_picture)
+                if uploaded_picture == None:
+                    file_name = ''
+                else:
+                    img_id = random.randint(1000, 10000)
+                    
+                    file_name = str(img_id) + uploaded_picture.name
+                    
+                    new_photo = os.path.join(PHOTO_PATH, file_name)
                 
-                with open(new_photo, "wb") as f:
-                    f.write(uploaded_picture.getbuffer())
+                    with open(new_photo, "wb") as f:
+                        f.write(uploaded_picture.getbuffer())
                 
                 entry = {
-                    "file_name": uploaded_picture.name,
+                    "file_name": file_name,
                     "title": title,
                     "fish_species": fish_type,
                     "lon": longitude,
@@ -135,6 +156,10 @@ def main():
     with visualization:
         raw = load_from_csv(ENTRY_CSV)
         
+        table_data = raw
+        
+        table_data = table_data.drop(columns=["file_name"])
+        
         data = raw.to_numpy()
         
         map_data = raw.to_dict()
@@ -145,7 +170,8 @@ def main():
         
         st.header("Table")
         
-        st.dataframe(raw)
+        with st.container(height=300):
+            st.dataframe(table_data)
 
         st.header("Map of Catches")
         st.map(map_data, color="#ADD8E6")
@@ -155,14 +181,14 @@ def main():
         st.bar_chart(transform_to_species_frequency_table(raw), x="species", y="frequency", x_label="Species", y_label="Count")
         
         st.header("Number of Catches a Day")
-        st.line_chart(transform_to_date_frequency_table(raw), x="date", y="frequency")
+        st.line_chart(transform_to_date_frequency_table(raw), x="Dates", y="Catches")
         
     with history:
         data = load_from_csv(ENTRY_CSV).to_numpy()
         
         db = transform_to_data_list(data)
         
-        titles = db.keys()
+        titles = list(db.keys())
         
         query = st.text_input("Search for titles of your best catches", placeholder="Type in to search - Press enter to search")
         
@@ -170,6 +196,8 @@ def main():
             results = [title for title in titles if query in title]
         else:
             results = titles
+            
+        results.sort()
             
         with st.container(height=200):
             chosen_entry = st.radio("Select a entry to view more", options=results)
@@ -185,7 +213,8 @@ def main():
             try:
                 st.image(image=PHOTO_PATH + "/" + entry_data['file_name'])
             except Exception:
-                st.error("Could not find image. It has either been deleted or moved")
+                if str(entry_data['file_name']).strip() != 'nan':
+                    st.error("Could not find image. It has either been deleted or moved")
                 
             st.text(f"Coordinates caught ({entry_data['lat']},{entry_data['lot']})")
             
@@ -198,7 +227,7 @@ def main():
     with record:
         data = load_from_csv(ENTRY_CSV)
 
-        raw = set(data['fish_species'])
+        raw = list(set(data['fish_species']))
         
         query = st.text_input("Search common names", placeholder="Type in to search - Press enter to search")
         
@@ -206,6 +235,8 @@ def main():
             fish_names = [fish for fish in raw if query in fish]
         else:
             fish_names = raw
+            
+        fish_names.sort()
 
         with st.container(height=200):
             chosen_fish = st.radio(label="Select species to examine", options=fish_names, index=None)
@@ -245,7 +276,7 @@ def main():
             else:
                 st.text("No summary provided. Check the wikipedia link below for more information")
             
-            st.text(f"Wikipedia link: {fish['wikipedia_url']}")
+            st.page_link(label="Click here for more information", page=fish['wikipedia_url'])
             
             
                 
