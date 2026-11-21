@@ -53,8 +53,11 @@ def transform_to_data_list(data):
             
     return res
 
-def transform_to_frequency_table(data):
+def transform_to_species_frequency_table(data):
     return data['fish_species'].value_counts().rename_axis("species").reset_index(name="frequency")
+
+def transform_to_date_frequency_table(data):
+    return data['datetime'].value_counts().rename_axis("date").reset_index(name="frequency")
     
 if not os.path.exists(PHOTO_PATH):
     os.makedirs(PHOTO_PATH)
@@ -149,9 +152,10 @@ def main():
         
         # Count
         st.header("Frequency of Species")
-        st.bar_chart(transform_to_frequency_table(raw), x="species", y="frequency", x_label="Species", y_label="Count")
+        st.bar_chart(transform_to_species_frequency_table(raw), x="species", y="frequency", x_label="Species", y_label="Count")
         
         st.header("Number of Catches a Day")
+        st.line_chart(transform_to_date_frequency_table(raw), x="date", y="frequency")
         
     with history:
         data = load_from_csv(ENTRY_CSV).to_numpy()
