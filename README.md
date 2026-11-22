@@ -1,4 +1,4 @@
-# Fish Track
+# Catch Track
 
 ## A fisherman's best way to track their catches
 

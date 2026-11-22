@@ -35,7 +35,7 @@ def load_from_csv(csv_file):
 def transform_to_data_list(data):
     res = {}
     
-    for i in range(1, len(data)):
+    for i in range(len(data)):
             raw = data[i]
             
             title = raw[1]
@@ -76,17 +76,20 @@ if not os.path.exists(ENTRY_PATH):
 
 
 def main():
-    st.title('Fish Track')
-    st.header('A way to keep track of fish')
+    st.title('Catch Track')
     
-    home, upload, history, visualization, record = st.tabs(["Home", "Upload", "History", "Visualization", "Fish Record"])
+    home, upload, history, species, visualization = st.tabs(["Home", "Upload", "History", "Species", "Visualization"])
     
     with home:
-        st.text("Welcome to Fish Track\nAn app designed for fishermen to record their best catches.")
+        st.header("Designed for fishermen and researchers to identify their catches")
+        st.subheader("Click on the pages above to get started")
         
         
     with upload:
+        st.title("Upload Catch")
+
         location = streamlit_geolocation()
+
         st.caption("Click above to load in your current position")
         
         
@@ -189,6 +192,8 @@ def main():
         db = transform_to_data_list(data)
         
         titles = list(db.keys())
+
+        st.title("History of Your Catches")
         
         query = st.text_input("Search for titles of your best catches", placeholder="Type in to search - Press enter to search")
         
@@ -205,9 +210,9 @@ def main():
         if chosen_entry:
             entry_data = db[chosen_entry]
             
-            st.title(entry_data['title'])
+            st.header(entry_data['title'])
             
-            st.header(f"Species: {entry_data['species']}")
+            st.subheader(f"Species: {entry_data['species']}")
             
             
             try:
@@ -215,19 +220,18 @@ def main():
             except Exception:
                 if str(entry_data['file_name']).strip() != 'nan':
                     st.error("Could not find image. It has either been deleted or moved")
-                
-            st.text(f"Coordinates caught ({entry_data['lat']},{entry_data['lot']})")
-            
-            st.text(f"Date & time captured: {entry_data['datetime']}")
-                
-            
-            
-            # st.image(PHOTO_PATH.join(entry_data['file_name']))
 
-    with record:
+            st.text(f"Date captured: {datetime.fromisoformat(entry_data['datetime']).strftime('%m/%d/%Y')}")
+                            
+            
+            st.text(f"Coordinates: ({entry_data['lat']},{entry_data['lot']})")
+
+    with species:
         data = load_from_csv(ENTRY_CSV)
 
         raw = list(set(data['fish_species']))
+
+        st.title("Species List")
         
         query = st.text_input("Search common names", placeholder="Type in to search - Press enter to search")
         
@@ -266,9 +270,9 @@ def main():
             
             photo = fish['default_photo']
             
-            st.title(f"Scientific name: {fish['name']}")
+            st.header(f"Scientific name: {fish['name']}")
                         
-            st.header(f"Common name: {fish['preferred_common_name']}")
+            st.subheader(f"Common name: {fish['preferred_common_name']}")
             
             st.image(photo['medium_url'], output_format="JPEG", width=400)
             st.caption(photo['attribution'])
